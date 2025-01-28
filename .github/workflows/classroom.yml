@@ -1,29 +1,61 @@
-name: Autograding Tests
-'on':
-- push
-- repository_dispatch
-permissions:
-  checks: write
-  actions: read
-  contents: read
+name: Build and Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
 jobs:
-  run-autograding-tests:
+  build-and-test:
     runs-on: ubuntu-latest
-    if: github.actor != 'github-classroom[bot]'
+    permissions:
+      checks: write
+      contents: read
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: cksdnj
-      id: cksdnj
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: cksdnj
-        setup-command: ''
-        command: make test
-        timeout: 10
-    - name: Autograding Reporter
-      uses: classroom-resources/autograding-grading-reporter@v1
-      env:
-        CKSDNJ_RESULTS: "${{steps.cksdnj.outputs.result}}"
-      with:
-        runners: cksdnj
+      # Step 1: Checkout Student Repository
+      - name: Checkout Student Repo
+        uses: actions/checkout@v3
+
+      # Step 2: Checkout Private Tests Repository
+      - name: Checkout Private Tests Repo
+        uses: actions/checkout@v3
+        with:
+          repository: mbjurca/IP_2025_Lab1_tests
+          token: ${{ secrets.TEST_REPO_TOKEN }}
+          path: private_tests
+          ref: main
+
+      # Step 3: Copy Student Code into Private Tests
+      - name: Copy Student Code into Private Tests
+        run: |
+          cp src/lab1.cpp private_tests/src/lab1.cpp
+          cp src/lab1.h   private_tests/src/lab1.h
+
+      # Step 4: Install Dependencies
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libopencv-dev
+
+      # Step 5: Configure CMake
+      - name: Configure (CMake)
+        run: cmake -S private_tests -B build
+
+      # Step 6: Build the Project
+      - name: Build
+        run: cmake --build build
+
+      # Step 7: Run Tests with CTest
+      - name: Run Tests
+        run: |
+          ctest --test-dir build --output-on-failure
+        continue-on-error: true
+
+
+      # Step 8: Run Education Autograding
+      - name: Autograding
+        uses: education/autograding@v1
+        with:
+          config-path: .github/classroom/autograding.json
