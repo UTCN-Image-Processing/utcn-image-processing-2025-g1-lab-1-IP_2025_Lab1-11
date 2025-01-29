@@ -27,18 +27,17 @@ jobs:
           path: private_tests
           ref: main
 
-      # Step 3: Copy Student Code into Private Tests
-      - name: Copy Student Code into Private Tests
+      # Step 3: Copy Student Code and Autograding Config into Private Tests
+      - name: Copy Student Code and Autograding Config into Private Tests
         run: |
           cp src/lab1.cpp private_tests/src/lab1.cpp
           cp src/lab1.h   private_tests/src/lab1.h
-
+          cp .github/classroom/autograding.json .
       # Step 4: Install Dependencies
       - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake g++ libopencv-dev
-
       # Step 5: Configure CMake
       - name: Configure (CMake)
         run: cmake -S private_tests -B build
@@ -47,15 +46,14 @@ jobs:
       - name: Build
         run: cmake --build build
 
-      # Step 7: Run Tests with CTest
-      - name: Run Tests
-        run: |
-          ctest --test-dir build --output-on-failure
-        continue-on-error: true
-
+      # Step 7: (Removed Manual Test Execution)
 
       # Step 8: Run Education Autograding
       - name: Autograding
         uses: education/autograding@v1
+        
+      - name: Display points 
+        uses: markpatterson27/autograding@dev-points-input-release
         with:
-          config-path: .github/classroom/autograding.json
+          points: 10
+          available-points: 100
